@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { addPerson, getAllPeople, deletePerson, editPerson ,getDB} from './db';
 import DatePicker from 'react-datepicker';
+import { FaBars, FaTimes , FaArrowUp } from 'react-icons/fa';
 import 'react-datepicker/dist/react-datepicker.css';
 import './style.css';
 
@@ -31,10 +32,13 @@ function PhoneBook() {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
 
+  const [visibleCount, setVisibleCount] = useState(2); // Show 2 at a time
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const savedTheme = localStorage.getItem('theme');
     return savedTheme === 'light' || savedTheme === 'dark' ? savedTheme : 'dark';
   });
+
+
 
   useEffect(() => {
     document.body.classList.remove('light', 'dark');
@@ -246,12 +250,58 @@ const importData = async (event: React.ChangeEvent<HTMLInputElement>) => {
   }
 };
 
+
+useEffect(() => {
+  const handleScroll = () => {
+    const scrollTop = window.scrollY;
+    const windowHeight = window.innerHeight;
+    const fullHeight = document.body.scrollHeight;
+
+    const scrollPercent = (scrollTop + windowHeight) / fullHeight;
+
+    if (scrollPercent > 0.8 && visibleCount < filteredPeople.length) {
+      setVisibleCount((prev) => Math.min(prev + 2, filteredPeople.length));
+    }
+  };
+
+  window.addEventListener("scroll", handleScroll);
+  return () => window.removeEventListener("scroll", handleScroll);
+}, [visibleCount, filteredPeople.length]);
+
+const scrollToTop = () => {
+  const duration = 500;
+  const start = window.scrollY;
+  const startTime = performance.now();
+
+  const animateScroll = (time: number) => {
+    const elapsed = time - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    window.scrollTo(0, start * (1 - progress));
+    if (progress < 1) {
+      requestAnimationFrame(animateScroll);
+    }
+  };
+
+  requestAnimationFrame(animateScroll);
+};
+
+
+const [isOpen, setIsOpen] = useState(false);
   return (
     <>
+      <button onClick={() => setIsOpen(!isOpen)} className='sidebarbtn'>
+        {isOpen ? <FaTimes size={15} /> : <FaBars size={15} />}
+      </button>
+      {
+      isOpen &&
       <div className='theme-div'> 
-        <p className='theme-p'>you can change the theme from here →</p>
-        <button onClick={toggleTheme} className='theme-button'>{theme}</button>
+        <button onClick={exportData}>Export Data</button>
+        <label htmlFor="file-upload" className="uploadbtn">Upload Data</label>
+        <input id="file-upload" type="file" accept=".json" onChange={importData} className='import-input'/>
+        <button onClick={toggleTheme} className='theme-button'>theme is:{theme}</button>
       </div>
+      }
+      <button className='scrolltotop' onClick={scrollToTop}><FaArrowUp /></button>
       <div className='edit-div'>
         <p className='theme-p'>you can change every thing :) </p>
           <br></br>
@@ -386,7 +436,7 @@ const importData = async (event: React.ChangeEvent<HTMLInputElement>) => {
         </div>
         <h3>People</h3>
         <ul>
-          {filteredPeople.map((person) => (
+        {filteredPeople.slice(0, visibleCount).map((person) => (
             <li key={person.id}>
               <div className='output-div'>
                 <p className='info'>Name:</p>                <p className='data'>{person.name}</p>
@@ -411,10 +461,6 @@ const importData = async (event: React.ChangeEvent<HTMLInputElement>) => {
             </li>
           ))}
         </ul>
-      </div>
-      <div className='container'>
-        <button onClick={exportData}>Export Data</button>
-        <input type="file" accept=".json" onChange={importData} />
       </div>
     </>
   );
