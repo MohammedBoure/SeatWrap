@@ -2,3 +2,6 @@
 -----
 
 feat(pwa): configure full offline support with Workbox caching
+-----
+
+docs(readme): add complete project overview and setup instructions
